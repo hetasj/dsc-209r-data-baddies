@@ -1,0 +1,24 @@
+{
+  "name": "dsc-209r-data-baddies",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hetasj/dsc-209r-data-baddies.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hetasj/dsc-209r-data-baddies/issues"
+  },
+  "homepage": "https://github.com/hetasj/dsc-209r-data-baddies#readme",
+  "dependencies": {
+    "d3": "^7.9.2"
+  }
+}
