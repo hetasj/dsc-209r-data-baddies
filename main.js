@@ -1,2 +1,3 @@
-console.log("My D3.js project is working!");
-d3.csv("education.csv")
+d3.csv("combined-fourteen-countries.csv").then(data => {
+    console.log(data);
+})
