@@ -32,8 +32,17 @@
              while the y-axis shows the gender gap in upper-secondary 
              educational attainment.</p>
         
-        <div id="chart"></div>
+        <!-- Main visualization container -->
+        <div id="chart">
+            <!-- Current year displayed above the chart -->
+            <div id="year-display">2004</div>
+            <!-- Legend explaining the three region colors -->
+            <div id="legend"></div>
+            <!-- D3 will insert the SVG chart here -->
+            <div id="bubble-chart"></div>
 
+        </div>
+        <!-- Script import -->
         <script type="module" src="main.js"></script>
     </body>
     </html>
