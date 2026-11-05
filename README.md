@@ -10,6 +10,8 @@ To run the optional browser check, visit **http://127.0.0.1:8765/tests/browser-c
 
 Alternatively, serve the folder using **Open with Live Server** on `index.html` in VS Code. If Python is installed, run `python -m http.server 8000` in this folder and visit `http://localhost:8000`.
 
+On a Mac, open Terminal in this folder and run `python3 -m http.server 8000`, then visit `http://localhost:8000`.
+
 Opening the HTML directly by double-clicking can block the CSV request. Internet access is required for the existing D3 CDN import.
 
 ## Step 0: project setup (Safia)
@@ -57,8 +59,6 @@ The Show selector offers gender gap, female attainment, male attainment and tota
 Gender gap is female minus male attainment in **percentage points**, with a symmetric axis and a dashed zero reference line. Each attainment view uses the same **0–100%** axis. Total attainment uses the supplied total column. The horizontal axis still shows government expenditure per secondary student (% of GDP per capita); bubble area still represents GDP per capita.
 
 The supplied data preparation is retained: only missing gaps of at most two years bounded by observations are interpolated for expenditure and attainment. Longer gaps and endpoints remain missing; GDP is not interpolated. A country appears only when expenditure, GDP and the selected measure are available. Tooltips identify estimated values, and the caption reports the number of countries shown. Axes and the GDP size scale stay fixed across years.
-
-On a Mac, open Terminal in this folder and run `python3 -m http.server 8000`, then visit `http://localhost:8000`.
 
 ## Step 5: tooltips, highlighting and region filters (Heta)
 
