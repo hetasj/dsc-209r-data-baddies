@@ -29,21 +29,46 @@
             Each circle represents a country, with its size representing
              GDP per capita. The x-axis shows government expenditure 
              per secondary student as a percentage of GDP per capita, 
-             while the y-axis shows the gender gap in upper-secondary 
+             while the y-axis shows the selected measure: the gender gap,
+             female attainment, male attainment or total upper-secondary
              educational attainment.</p>
         
         <!-- Main visualization container -->
         <div id="chart">
             <!-- Current year displayed above the chart -->
-            <div id="year-display">2004</div>
+            <output id="year-display" for="year-slider">2004</output>
+            <!-- Step 3: move through the years manually or play the animation. -->
+            <div class="year-controls" role="group" aria-label="Year animation">
+                <button id="play-pause" type="button" aria-pressed="false" disabled>Play</button>
+                <label for="year-slider">Year</label>
+                <span aria-hidden="true">2004</span>
+                <input id="year-slider" type="range" min="2004" max="2018"
+                    step="1" value="2004" aria-describedby="animation-help" disabled>
+                <span aria-hidden="true">2018</span>
+            </div>
+            <p id="animation-help" class="chart-note">Drag the slider or press Play. Moving the slider pauses playback. Play again at 2018 to restart.</p>
+            <!-- Step 4: choose which measure appears on the vertical axis. -->
+            <div class="measure-controls">
+                <label for="measure-select">Show</label>
+                <select id="measure-select" aria-describedby="measure-description" disabled>
+                    <option value="genderGap">Gender gap</option>
+                    <option value="female">Female attainment</option>
+                    <option value="male">Male attainment</option>
+                    <option value="total">Total attainment</option>
+                </select>
+            </div>
+            <p id="measure-description" class="chart-note">Female minus male attainment, in percentage points. Positive values mean higher female attainment.</p>
             <!-- Legend explaining the three region colors -->
             <div id="legend"></div>
             <!-- D3 will insert the SVG chart here -->
             <div id="bubble-chart"></div>
+            <p id="chart-status" class="chart-note" role="status">Loading chart data...</p>
+            <p class="chart-note">Bubble area represents GDP per capita. Attainment is the share of adults aged 25+ who have completed at least upper secondary education. Gaps of up to two years are estimated only between available observations; tooltips identify estimated values.</p>
 
         </div>
         <!-- Script import -->
         <script type="module" src="main.js"></script>
+        <noscript><p>Enable JavaScript to use the chart and year controls.</p></noscript>
     </body>
     </html>
 

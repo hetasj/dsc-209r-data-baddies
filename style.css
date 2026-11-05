@@ -32,6 +32,7 @@ p {
 
 /* Display the current year */
 #year-display {
+    display: block;
     text-align: center;
     font-size: 48px;
     font-weight: bold;
@@ -95,4 +96,92 @@ p {
     width: 13px;
     height: 13px;
     border-radius: 50%;
+}
+
+/********** Step 3: year animation controls ***********/
+.year-controls,
+.measure-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: rgb(110, 89, 106);
+}
+
+.year-controls {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+#year-slider {
+    flex: 1;
+    min-width: 80px;
+    min-height: 44px;
+    accent-color: rgb(180, 70, 156);
+    cursor: pointer;
+}
+
+button,
+select {
+    min-height: 44px;
+    padding: 8px 16px;
+    border: 1px solid rgb(180, 70, 156);
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+}
+
+#play-pause {
+    min-width: 88px;
+    color: white;
+    background: #90377d;
+}
+
+#play-pause:hover:not(:disabled) {
+    background: #742a64;
+}
+
+button:disabled,
+select:disabled,
+input:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+.country-bubble:focus-visible {
+    outline: 3px solid #703964;
+    outline-offset: 4px;
+}
+
+.chart-note {
+    text-align: center;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/********** Step 4: measure selector ***********/
+.measure-controls {
+    margin-top: 24px;
+}
+
+#measure-select {
+    color: #593f55;
+    background: white;
+    max-width: 100%;
+}
+
+.empty-message {
+    fill: rgb(110, 89, 106);
+    font-size: 16px;
+    text-anchor: middle;
+}
+
+@media (max-width: 600px) {
+    body { margin: 20px 16px; }
+    .year-controls { flex-wrap: wrap; gap: 8px; }
+    #year-slider { flex-basis: 35%; }
+    #legend { gap: 14px; }
 }

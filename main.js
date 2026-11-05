@@ -56,8 +56,8 @@ function parseNumber(value) {
     return Number.isFinite(number) ? number : null;
 }
 
-//# Interpolate short missing gaps (We only interpolate gaps of 
-// maximum two consecutive years). The missing value must have a real observation 
+//# Interpolate short missing gaps (We only interpolate gaps of
+// maximum two consecutive years). The missing value must have a real observation
 // before and after it. We also record which values have been estimated.
 
 function interpolateShortGaps(rows, field, maxGap = 2) {
@@ -128,12 +128,19 @@ function interpolateShortGaps(rows, field, maxGap = 2) {
 //# Load and prepare the CSV dataset (step 1)
 d3.csv("combined-fourteen-countries.csv").then(rawData => {
 
-    console.log("Original CSV data:", rawData);
+    // Fail clearly if a different dataset was supplied.
+    if (!Object.values(columns).every(column => rawData.columns.includes(column))) {
+        throw new Error("The CSV does not contain the expected education columns.");
+    }
     //FILTER THE YEARS WE NEED:
     const filteredData = rawData.filter(d => {
         const year = Number(d[columns.year]);
-        return year >= startYear && year <= endYear;
+        return year >= startYear && year <= endYear &&
+            Object.hasOwn(regionByCountry, d[columns.Country]);
     });
+    if (filteredData.length === 0) {
+        throw new Error("No observations were found for 2004 through 2018.");
+    }
     //GROUP DATA BY COUNTRY: create separate groups for each country
     const groupedData = d3.group(filteredData, d => d[columns.Country]);
     // TRANSFORM THE DATA: create a simpler data structure for D3
@@ -182,7 +189,7 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
                 estimated: {}
             };
         });
-        
+       
         // INTERPOLATE SHORT MISSING GAPS
         // Interpolate government expenditure.
         interpolateShortGaps(rows, "expenditure", 2);
@@ -241,30 +248,55 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .domain(["Europe", "Latin America", "United States"])
         .range(["#B4469C", "#70A9CE", "#D7A34E"]);
 
-    // FILTER DATA FOR THE FIRST YEAR
-    // We start by displaying 2004.
-    const initialYear = 2004;
-    // Only keep countries with all the values needed
-    // to draw their bubbles.
-    const initialData = chartData.filter(d => {
-        return (
-            d.year === initialYear &&
-            d.expenditure !== null &&
-            d.genderGap !== null &&
-            d.gdpPerCapita !== null
-        );
-    });
+    // Steps 3 and 4 share one year and one selected measure.
+    let currentYear = startYear;
+    let currentMeasure = "genderGap";
+    let playbackTimer = null;
+    const yearInterval = 1000;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const yearSlider = d3.select("#year-slider");
+    const playButton = d3.select("#play-pause");
+    const measureSelect = d3.select("#measure-select");
+    const measures = {
+        genderGap: {
+            label: "Gender gap",
+            axisLabel: "Gender gap in educational attainment (percentage points)",
+            unit: " percentage points",
+            description: "Female minus male attainment, in percentage points. Positive values mean higher female attainment."
+        },
+        female: {
+            label: "Female attainment",
+            axisLabel: "Female upper-secondary attainment (%)",
+            unit: "%",
+            description: "Percentage of women aged 25+ who have completed at least upper secondary education."
+        },
+        male: {
+            label: "Male attainment",
+            axisLabel: "Male upper-secondary attainment (%)",
+            unit: "%",
+            description: "Percentage of men aged 25+ who have completed at least upper secondary education."
+        },
+        total: {
+            label: "Total attainment",
+            axisLabel: "Total upper-secondary attainment (%)",
+            unit: "%",
+            description: "Percentage of all adults aged 25+ who have completed at least upper secondary education, using the dataset's total rate."
+        }
+    };
 
     // CREATE THE X-AXIS SCALE
     // The X-axis represents government expenditure.
     // We use a linear scale because expenditure is
     // expressed as a percentage.
     const xExtent = d3.extent(
-        chartData.filter(d => d.expenditure !== null),
+        chartData.filter(d => Number.isFinite(d.expenditure)),
         d => d.expenditure
     );
+    if (!xExtent.every(Number.isFinite)) {
+        throw new Error("No government expenditure values are available to plot.");
+    }
     // Add a little space at both ends of the axis.
-    const xPadding = (xExtent[1] - xExtent[0]) * 0.05;
+    const xPadding = (xExtent[1] - xExtent[0]) * 0.05 || 1;
     const x = d3.scaleLinear()
         .domain([
             Math.max(0, xExtent[0] - xPadding),
@@ -285,7 +317,9 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .domain([-maxGap * 1.1, maxGap * 1.1])
         .range([innerHeight, 0])
         .nice();
-        
+    // Keep the same domain across all years for meaningful comparisons.
+    const gapDomain = y.domain();
+       
     // CREATE THE BUBBLE SIZE SCALE
     // GDP per capita determines the bubble size.
     // A square-root scale makes circle AREA proportional
@@ -308,7 +342,7 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .attr("viewBox", `0 0 ${width} ${height}`)
 
         // Make the SVG accessible.
-        .attr("role", "img")
+        .attr("role", "group")
         .attr("aria-label", "Bubble chart showing gender gaps in education");
 
     // Create a group that contains the chart itself.
@@ -338,8 +372,8 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .tickSize(-innerWidth)
         .tickFormat("");
 
-    plot.append("g")
-        .attr("class", "grid")
+    const yGridGroup = plot.append("g")
+        .attr("class", "grid y-grid")
         .call(yGrid)
         .call(g => g.select(".domain").remove());
 
@@ -358,8 +392,9 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     const yAxis = d3.axisLeft(y)
         .ticks(8);
 
-    plot.append("g")
-        .call(yAxis);   
+    const yAxisGroup = plot.append("g")
+        .attr("class", "y-axis")
+        .call(yAxis);
 
     // ADD THE X-AXIS LABEL
     plot.append("text")
@@ -370,8 +405,8 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .text("Government expenditure per secondary student (% of GDP per capita)");
 
     // ADD THE Y-AXIS LABEL
-     plot.append("text")
-        .attr("class", "axis-label")
+    const yAxisLabel = plot.append("text")
+        .attr("class", "axis-label y-axis-label")
         .attr("transform", "rotate(-90)")
         .attr("x", -innerHeight / 2)
         .attr("y", -65)
@@ -381,7 +416,8 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
 
     // DRAW THE ZERO REFERENCE LINE
     // This line helps us see whether female or male attainment is higher.
-    plot.append("line")
+    const zeroLine = plot.append("line")
+        .attr("class", "zero-line")
         .attr("x1", 0)
         .attr("x2", innerWidth)
         .attr("y1", y(0))
@@ -390,76 +426,163 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .attr("stroke-width", 1.5)
         .attr("stroke-dasharray", "5,5");
 
-    // DRAW THE BUBBLES
-    // Create one circle for each country.
-    const bubbles = plot.append("g")
-        .selectAll("circle")
-        .data(
-            // Draw larger bubbles first so smaller ones
-            // remain visible on top.
-            initialData.sort(
-                (a, b) => d3.descending(
-                    a.gdpPerCapita,
-                    b.gdpPerCapita
-                )
-            ),
-            d => d.country
-        )
-        .join("circle")
+    const bubbleLayer = plot.append("g").attr("class", "bubbles");
+    const emptyMessage = plot.append("text")
+        .attr("class", "empty-message")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight / 2)
+        .style("display", "none")
+        .text("No countries have all required values for this year and measure.");
 
-        // Position the bubble horizontally.
-        .attr("cx", d => x(d.expenditure))
+    // Tooltip values must follow the current year and selected measure.
+    function formatValue(d, field, unit) {
+        if (!Number.isFinite(d[field])) return "Unavailable";
+        return d[field].toFixed(2) + unit +
+            (d.estimated[field] ? " (estimated)" : "");
+    }
 
-        // Position the bubble vertically.
-        .attr("cy", d => y(d.genderGap))
+    function tooltipText(d) {
+        const measure = measures[currentMeasure];
+        return [
+            d.country,
+            "Region: " + d.region,
+            "Year: " + d.year,
+            "Selected measure: " + measure.label + " = " +
+                formatValue(d, currentMeasure, measure.unit),
+            "Government expenditure per secondary student (% of GDP per capita): " +
+                formatValue(d, "expenditure", "%"),
+            "Gender gap: " + formatValue(d, "genderGap", " percentage points"),
+            "Female attainment: " + formatValue(d, "female", "%"),
+            "Male attainment: " + formatValue(d, "male", "%"),
+            "Total attainment: " + formatValue(d, "total", "%"),
+            "GDP per capita: $" + d.gdpPerCapita.toLocaleString("en-US")
+        ].join("\n");
+    }
 
-        // Set the bubble radius based on GDP per capita.
-        .attr("r", d => radius(d.gdpPerCapita))
+    //********* STEP 3: Year animation and smooth chart updates *********//
+    // This same update function also handles the measure selector (step 4).
+    function updateChart(duration = 600) {
+        if (reducedMotion.matches) duration = 0;
+        const measure = measures[currentMeasure];
+        const isGap = currentMeasure === "genderGap";
+        const yearData = chartData.filter(d =>
+            d.year === currentYear &&
+            Number.isFinite(d.expenditure) &&
+            Number.isFinite(d[currentMeasure]) &&
+            Number.isFinite(d.gdpPerCapita) && d.gdpPerCapita >= 0
+        ).sort((a, b) => d3.descending(a.gdpPerCapita, b.gdpPerCapita));
 
-        // Set the bubble color based on geographic region.
-        .attr("fill", d => color(d.region))
+        // Cancel stale transitions so rapid scrubbing never queues old years.
+        svg.interrupt("chart");
+        svg.selectAll("*").interrupt("chart");
+        y.domain(isGap ? gapDomain : [0, 100]);
+        yAxis.tickFormat(isGap ? d3.format(".0f") : value => value + "%");
+        const transition = duration > 0
+            ? svg.transition("chart").duration(duration).ease(d3.easeCubicInOut)
+            : null;
+        const animate = selection => transition ? selection.transition(transition) : selection;
 
-        // Make the bubbles slightly transparent.
-        .attr("fill-opacity", 0.72)
+        animate(yAxisGroup).call(yAxis);
+        animate(yGridGroup).call(yGrid);
+        yGridGroup.select(".domain").remove();
+        yAxisLabel.text(measure.axisLabel);
+        animate(zeroLine)
+            .attr("y1", y(0)).attr("y2", y(0))
+            .attr("opacity", isGap ? 1 : 0);
 
-        // Add a border around each bubble.
-        .attr("stroke", d => d3.color(color(d.region)).darker(0.7))
+        // A stable country key moves existing bubbles and fades missing ones.
+        const bubbles = bubbleLayer.selectAll("circle")
+            .data(yearData, d => d.country);
+        animate(bubbles.exit().style("pointer-events", "none")
+            .attr("tabindex", -1).attr("aria-hidden", "true"))
+            .attr("r", 0).attr("opacity", 0).remove();
 
-        .attr("stroke-width", 1.2)
+        const entering = bubbles.enter().append("circle")
+            .attr("class", "country-bubble")
+            .attr("cx", d => x(d.expenditure))
+            .attr("cy", d => y(d[currentMeasure]))
+            .attr("r", 0)
+            .attr("opacity", 0)
+            .attr("fill", d => color(d.region))
+            .attr("fill-opacity", 0.72)
+            .attr("stroke", d => d3.color(color(d.region)).darker(0.7))
+            .attr("stroke-width", 1.2)
+            .style("cursor", "help");
+        entering.append("title");
 
-        // Show a pointer when hovering over a bubble.
-        .style("cursor", "pointer");
+        const activeBubbles = entering.merge(bubbles).order()
+            .style("pointer-events", "auto")
+            .attr("tabindex", 0).attr("role", "img").attr("aria-hidden", null)
+            .attr("aria-label", tooltipText)
+            .attr("data-country", d => d.country)
+            .attr("data-year", currentYear)
+            .attr("data-measure", currentMeasure);
+        activeBubbles.select("title").text(tooltipText);
+        animate(activeBubbles)
+            .attr("cx", d => x(d.expenditure))
+            .attr("cy", d => y(d[currentMeasure]))
+            .attr("r", d => radius(d.gdpPerCapita))
+            .attr("opacity", 1);
 
-    // ADD TOOLTIP INFORMATION
-     // The browser will display this information when
-    // someone hovers over a bubble.
+        d3.select("#year-display").text(currentYear);
+        yearSlider.property("value", currentYear).attr("aria-valuetext", String(currentYear));
+        d3.select("#measure-description").text(measure.description);
+        svg.attr("aria-label", measure.label + " by government expenditure in " + currentYear);
+        emptyMessage.style("display", yearData.length ? "none" : null);
+        d3.select("#chart-status").text(
+            yearData.length + " of " + countries.length + " countries shown for " +
+            currentYear + ". Countries missing expenditure, GDP per capita or " +
+            measure.label.toLowerCase() + " are omitted."
+        );
+    }
 
-    bubbles.append("title")
-        .text(d => {
+    function pausePlayback() {
+        window.clearInterval(playbackTimer);
+        playbackTimer = null;
+        playButton.text("Play").attr("aria-pressed", "false")
+            .attr("aria-label", "Play year animation");
+    }
 
-            return [
-                d.country,
-                "Region: " + d.region,
-                "Year: " + d.year,
-                "Government expenditure on Education (%GDP): " +
-                    d.expenditure.toFixed(2) + "%",
-                "Gender gap: " +
-                    d.genderGap.toFixed(2) + " percentage points",
-                "Female attainment: " +
-                    (d.female === null ? "Unavailable" : d.female.toFixed(2) + "%"),
-                "Male attainment: " +
-                    (d.male === null ? "Unavailable" : d.male.toFixed(2) + "%"),
-                "GDP per capita: $" +
-                    d.gdpPerCapita.toLocaleString("en-US"),
-                "Estimated gender gap: " +
-                    (d.estimated.genderGap ? "Yes" : "No")
-            ].join("\n");
+    playButton.on("click", () => {
+        if (playbackTimer !== null) {
+            pausePlayback();
+            return;
+        }
+        if (currentYear === endYear) {
+            currentYear = startYear;
+            updateChart(0);
+        }
+        playButton.text("Pause").attr("aria-pressed", "true")
+            .attr("aria-label", "Pause year animation");
+        playbackTimer = window.setInterval(() => {
+            currentYear = Math.min(currentYear + 1, endYear);
+            updateChart(750);
+            if (currentYear === endYear) pausePlayback();
+        }, yearInterval);
+    });
 
-        });
+    yearSlider.on("input", event => {
+        pausePlayback();
+        currentYear = Number(event.target.value);
+        updateChart(200);
+    });
 
-    // DISPLAY THE CURRENT YEAR
-    d3.select("#year-display")
-        .text(initialYear);
+    //********* STEP 4: Switch the attainment measure *********//
+    measureSelect.on("change", event => {
+        currentMeasure = event.target.value;
+        updateChart();
+    });
+
+    // Avoid advancing through unseen years when the tab is in the background.
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) pausePlayback();
+    });
+    window.addEventListener("pagehide", pausePlayback);
+    pausePlayback();
+    updateChart(0);
+    yearSlider.property("disabled", false);
+    playButton.property("disabled", false);
+    measureSelect.property("disabled", false);
 
     // CREATE THE REGION LEGEND
     const regions = [
@@ -483,5 +606,11 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     legend.append("span")
         .text(d => d);
 
+}).catch(error => {
+    console.error("Unable to load the education chart:", error);
+    d3.selectAll("#year-slider, #play-pause, #measure-select").property("disabled", true);
+    d3.select("#chart-status").attr("role", "alert").text(
+        "The chart could not load. Keep combined-fourteen-countries.csv beside index.html " +
+        "and main.js, and open the project through a local web server. " + error.message
+    );
 });
-

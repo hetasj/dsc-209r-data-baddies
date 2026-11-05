@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Project 3 browser checks</title>
+<style>body { font: 15px system-ui; margin: 20px; } iframe { width: 1100px; height: 1100px; border: 1px solid #ddd; } pre { white-space: pre-wrap; } #result { padding: 16px; background: #f5f1f5; } #progress { width: min(100%, 500px); }</style>
+<h1>Steps 3 and 4: browser checks</h1>
+<p>This page tests the chart automatically. To use the chart yourself, <a href="../index.html">open index.html</a>.</p>
+<p>Checks usually take 40–60 seconds. Keep this tab visible and do not change the chart controls during the test.</p>
+<progress id="progress" max="100" value="0" aria-label="Test progress"></progress>
+<pre id="result" role="status">Starting browser checks...</pre>
+<noscript>JavaScript is disabled. Enable JavaScript and reload to run the checks.</noscript>
+<iframe id="app" title="Education chart under test" hidden></iframe>
+<script>
+// Run this bootstrap without an import so loading failures can be reported.
+const frame = document.getElementById('app');
+const result = document.getElementById('result');
+const progressBar = document.getElementById('progress');
+let checks = 0;
+const failures = [];
+let finished = false;
+let stage = 'Starting';
+let watchdog;
+let heartbeat;
+const startedAt = Date.now();
+const stopped = new Error('Checks stopped.');
+function report() {
+    if (!finished) result.textContent = 'RUNNING — ' + stage + '\n' + checks +
+        ' checks completed · ' + Math.round((Date.now() - startedAt) / 1000) + ' seconds elapsed';
+}
+function setStage(message, percent) {
+    if (finished) throw stopped;
+    stage = message;
+    progressBar.value = percent;
+    report();
+}
+function finish(message, passed = false) {
+    if (finished) return;
+    finished = true;
+    clearTimeout(watchdog);
+    clearInterval(heartbeat);
+    result.textContent = message;
+    document.title = (passed ? 'PASS' : 'FAIL') + ' — Project 3';
+    if (passed) progressBar.value = 100;
+    // A failed check must not leave its chart playback running.
+    try {
+        const button = frame.contentDocument?.getElementById('play-pause');
+        if (button?.getAttribute('aria-pressed') === 'true') button.click();
+    } catch { /* A local-file frame may be inaccessible. */ }
+    if (!passed) frame.hidden = true;
+}
+function withTimeout(promise, milliseconds, message) {
+    let timer;
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), milliseconds); })
+    ]).finally(() => clearTimeout(timer));
+}
+const delay = async ms => {
+    await new Promise(resolve => setTimeout(resolve, ms));
+    if (finished) throw stopped;
+};
+function assert(condition, message) {
+    if (finished) throw stopped;
+    checks++;
+    if (!condition) throw new Error(message);
+}
+const columns = {
+    expenditure: 'average_value_Government expenditure per student, secondary (% of GDP per capita)',
+    gdpPerCapita: 'average_value_GDP per capita (constant 2010 US$)',
+    female: 'average_value_Educational attainment, at least completed upper secondary, population 25+, female (%) (cumulative)',
+    male: 'average_value_Educational attainment, at least completed upper secondary, population 25+, male (%) (cumulative)',
+    total: 'average_value_Educational attainment, at least completed upper secondary, population 25+, total (%) (cumulative)'
+};
+
+async function runChecks() {
+    try {
+        // Ordinary file:// pages cannot reliably load modules, CSV or frames.
+        // The automated runner explicitly enables file access in an isolated browser.
+        if (location.protocol === 'file:' && !new URLSearchParams(location.search).has('automated')) {
+            throw new Error('This test was opened by double-clicking the HTML file.\n' +
+                'Serve the extracted project folder first. In VS Code, open index.html with Live Server, ' +
+                'then visit tests/browser-check.html on the same localhost address.\n' +
+                'If Python is installed, run python -m http.server 8000 in the project folder and open ' +
+                'http://localhost:8000/tests/browser-check.html.\n' +
+                'To use the chart instead of testing it, open index.html through that server.');
+        }
+        watchdog = setTimeout(() => finish('FAIL — Checks timed out during: ' + stage +
+            '.\nReload the page, keep this tab visible, and check that your internet connection can load cdn.jsdelivr.net.'), 90000);
+        heartbeat = setInterval(report, 1000);
+        setStage('Loading D3 from cdn.jsdelivr.net (up to 15 seconds)', 2);
+        const d3 = await withTimeout(import('https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm'), 15000,
+            'D3 did not load within 15 seconds. Check your internet connection and whether cdn.jsdelivr.net is blocked.');
+        setStage('Loading the chart and CSV data', 5);
+        // Attach the load handler before navigating; ignore the initial blank frame.
+        const loaded = new Promise(resolve => {
+            const onLoad = () => {
+                try { if (frame.contentWindow.location.href === 'about:blank') return; } catch { }
+                frame.removeEventListener('load', onLoad);
+                resolve();
+            };
+            frame.addEventListener('load', onLoad);
+        });
+        frame.hidden = false;
+        frame.src = '../index.html';
+        await withTimeout(loaded, 15000, 'The chart page did not load. Serve the entire extracted folder, including index.html, main.js and the CSV.');
+        const win = frame.contentWindow;
+        const doc = win.document;
+        assert(Boolean(doc.getElementById('play-pause')), 'Chart page is available at ../index.html');
+        win.addEventListener('error', event => failures.push(event.message));
+        const $ = id => doc.getElementById(id);
+        const change = (id, value, type = 'change') => {
+            $(id).value = value;
+            $(id).dispatchEvent(new win.Event(type, { bubbles: true }));
+        };
+        for (let attempt = 0; $('play-pause').disabled && attempt < 100; attempt++) await delay(100);
+        assert(!$('play-pause').disabled, 'Chart initializes: ' + $('chart-status').textContent);
+        assert($('year-slider').value === '2004', 'Initial year is 2004');
+        assert($('measure-select').value === 'genderGap', 'Initial measure is gender gap');
+        const source = await withTimeout(d3.csv('../combined-fourteen-countries.csv'), 10000,
+            'The CSV did not load. Keep combined-fourteen-countries.csv in the project folder and serve the whole folder.');
+        const countries = [...new Set(source.map(row => row['Country Name']))];
+        assert(countries.length === 14, 'Matching 14-country source data');
+        const raw = new Map(source.filter(row => +row.Year >= 2004 && +row.Year <= 2018)
+            .map(row => [row['Country Name'] + ':' + row.Year, row]));
+        function original(country, year, field) {
+            const value = raw.get(country + ':' + year)?.[columns[field]];
+            return value === undefined || value.trim() === '' ? null : Number(value);
+        }
+        // Independently derive expected values by finding bounding source years.
+        function expected(country, year, field) {
+            if (field === 'genderGap') {
+                const female = expected(country, year, 'female');
+                const male = expected(country, year, 'male');
+                return female === null || male === null ? null : female - male;
+            }
+            const value = original(country, year, field);
+            if (value !== null || field === 'gdpPerCapita') return value;
+            let before = year - 1, after = year + 1;
+            while (before >= 2004 && original(country, before, field) === null) before--;
+            while (after <= 2018 && original(country, after, field) === null) after++;
+            if (before < 2004 || after > 2018 || after - before > 3) return null;
+            return original(country, before, field) +
+                (original(country, after, field) - original(country, before, field)) *
+                (year - before) / (after - before);
+        }
+        const bubbles = () => [...doc.querySelectorAll('.country-bubble')];
+        const nearly = (a, b) => Math.abs(a - b) < 1e-7;
+        let referenceX = null, referenceRadius = null;
+        const measureNames = ['genderGap', 'female', 'male', 'total'];
+        for (const measure of measureNames) {
+            change('measure-select', measure);
+            await delay(650);
+            for (let year = 2004; year <= 2018; year++) {
+                const combination = measureNames.indexOf(measure) * 15 + year - 2004;
+                setStage('Checking year/measure ' + (combination + 1) + ' of 60: ' + measure + ', ' + year, 10 + combination);
+                change('year-slider', year, 'input');
+                await delay(260);
+                const expectedCountries = countries.filter(country =>
+                    ['expenditure', 'gdpPerCapita', measure].every(field => expected(country, year, field) !== null));
+                const nodes = bubbles();
+                assert(nodes.length === expectedCountries.length, measure + '/' + year + ': coverage');
+                assert(new Set(nodes.map(node => node.dataset.country)).size === nodes.length, 'No duplicate country bubbles');
+                assert($('year-display').textContent === String(year), 'Year display follows slider');
+                assert($('chart-status').textContent.startsWith(nodes.length + ' of 14'), 'Coverage text matches chart');
+                for (const node of nodes) {
+                    const country = node.dataset.country;
+                    assert(expectedCountries.includes(country), 'Country has the required measure');
+                    const datum = node.__data__;
+                    for (const field of ['expenditure', 'gdpPerCapita', measure]) {
+                        assert(nearly(datum[field], expected(country, year, field)), country + ': correct ' + field);
+                    }
+                    assert(['cx', 'cy', 'r'].every(attr => Number.isFinite(+node.getAttribute(attr))), 'Finite bubble geometry');
+                    assert(+node.getAttribute('opacity') === 1, measure + '/' + year + '/' + country + ': transition reaches full opacity (got ' + node.getAttribute('opacity') + ')');
+                    assert(node.querySelector('title').textContent.includes('Year: ' + year), 'Tooltip follows year');
+                    assert(node.querySelector('title').textContent.includes('Total attainment:'), 'Tooltip includes total');
+                    if (measure !== 'genderGap') assert(nearly(+node.getAttribute('cy'), 340 * (1 - datum[measure] / 100)), 'Attainment position uses 0–100% axis');
+                    const xRatio = +node.getAttribute('cx');
+                    if (country === 'United States' && year === 2004) {
+                        if (referenceX === null) { referenceX = xRatio; referenceRadius = +node.getAttribute('r'); }
+                        assert(nearly(xRatio, referenceX) && nearly(+node.getAttribute('r'), referenceRadius), 'Switching measures preserves expenditure and GDP encodings');
+                    }
+                }
+            }
+            const zeroOpacity = +doc.querySelector('.zero-line').getAttribute('opacity');
+            assert(zeroOpacity === (measure === 'genderGap' ? 1 : 0), 'Zero line only visible for gender gap');
+            const label = doc.querySelector('.y-axis-label').textContent;
+            assert(label.includes(measure === 'genderGap' ? 'percentage points' : '(%)'), 'Correct axis units');
+        }
+
+        // Rapid changes must leave only the latest year and measure on screen.
+        setStage('Checking rapid control changes and smooth transitions', 72);
+        for (let year = 2004; year <= 2018; year++) {
+            change('year-slider', year, 'input');
+            change('measure-select', year % 2 ? 'female' : 'male');
+        }
+        change('year-slider', 2010, 'input');
+        change('measure-select', 'total');
+        await delay(700);
+        assert(bubbles().every(node => node.dataset.year === '2010' && node.dataset.measure === 'total'), 'Latest rapid input wins');
+        assert(new Set(bubbles().map(node => node.dataset.country)).size === bubbles().length, 'Interrupted exits do not duplicate bubbles');
+
+        // Verify movement during a transition, not just its final position.
+        change('year-slider', 2004, 'input');
+        change('measure-select', 'female');
+        await delay(700);
+        const moving = bubbles().find(node => Math.abs(node.__data__.female - node.__data__.male) > 1);
+        assert(Boolean(moving), 'A country has distinct female and male rates');
+        const startY = +moving.getAttribute('cy');
+        const targetY = 340 * (1 - moving.__data__.male / 100);
+        change('measure-select', 'male');
+        await delay(200);
+        if (!win.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const duringY = +moving.getAttribute('cy');
+            assert(duringY > Math.min(startY, targetY) && duringY < Math.max(startY, targetY), 'Measure change animates through intermediate positions');
+        }
+        await delay(500);
+        assert(nearly(+moving.getAttribute('cy'), targetY), 'Measure transition finishes at the expected value');
+
+        setStage('Checking play, pause and slider controls', 78);
+        $('play-pause').click();
+        assert($('play-pause').textContent === 'Pause', 'Play changes button state');
+        await delay(1150);
+        assert($('year-slider').value === '2005', 'Playback advances a year');
+        change('measure-select', 'total');
+        assert($('play-pause').textContent === 'Pause', 'Measure changes preserve playback');
+        $('play-pause').click();
+        const pausedYear = $('year-slider').value;
+        await delay(1200);
+        assert($('year-slider').value === pausedYear, 'Pause stops advancement');
+        $('play-pause').click();
+        change('year-slider', 2012, 'input');
+        await delay(1200);
+        assert($('play-pause').textContent === 'Play' && $('year-slider').value === '2012', 'Scrubbing pauses playback');
+
+        change('year-slider', 2017, 'input');
+        $('play-pause').click();
+        await delay(1900);
+        assert($('year-slider').value === '2018' && $('play-pause').textContent === 'Play', 'Playback stops at 2018');
+        $('play-pause').click();
+        assert($('year-slider').value === '2004', 'Play at the end restarts at 2004');
+        setStage('Playing the full 2004–2018 animation (about 15 seconds)', 88);
+        await delay(15100);
+        assert($('year-slider').value === '2018' && $('play-pause').textContent === 'Play', 'Full playback reaches 2018 and stops');
+        assert(bubbles().every(node => node.dataset.year === '2018'), 'Final bubbles match the final year');
+
+        setStage('Checking mobile and desktop layouts', 96);
+        for (const width of [375, 768, 1100]) {
+            frame.style.width = width + 'px';
+            await delay(100);
+            assert(doc.documentElement.scrollWidth <= doc.documentElement.clientWidth + 1, 'No page overflow at ' + width + 'px');
+        }
+        assert(failures.length === 0, 'No runtime errors: ' + failures.join('; '));
+        finish('PASS — ' + checks + ' checks; all 60 year/measure combinations, transitions, playback and responsive layout.', true);
+    } catch (error) {
+        if (finished) return;
+        let help = '';
+        if (stage.startsWith('Loading D3')) help = '\nCheck your internet connection and whether cdn.jsdelivr.net is blocked.';
+        if (error.name === 'SecurityError') help = '\nOpen this test through Live Server or localhost, not by double-clicking the HTML file.';
+        finish('FAIL after ' + checks + ' checks — ' + error.message + help);
+    }
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !finished) finish('FAIL — Checks stopped because this tab was hidden. Reload and keep this tab visible until the checks finish.');
+});
+runChecks();
+</script>
+</html>
