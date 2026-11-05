@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <title>Project 3 browser checks</title>
 <style>body { font: 15px system-ui; margin: 20px; } iframe { width: 1100px; height: 1100px; border: 1px solid #ddd; } pre { white-space: pre-wrap; } #result { padding: 16px; background: #f5f1f5; } #progress { width: min(100%, 500px); }</style>
-<h1>Steps 3 and 4: browser checks</h1>
+<h1>Steps 3 to 5: browser checks</h1>
 <p>This page tests the chart automatically. To use the chart yourself, <a href="../index.html">open index.html</a>.</p>
 <p>Checks usually take 40–60 seconds. Keep this tab visible and do not change the chart controls during the test.</p>
 <progress id="progress" max="100" value="0" aria-label="Test progress"></progress>
@@ -171,8 +171,8 @@ async function runChecks() {
                     }
                     assert(['cx', 'cy', 'r'].every(attr => Number.isFinite(+node.getAttribute(attr))), 'Finite bubble geometry');
                     assert(+node.getAttribute('opacity') === 1, measure + '/' + year + '/' + country + ': transition reaches full opacity (got ' + node.getAttribute('opacity') + ')');
-                    assert(node.querySelector('title').textContent.includes('Year: ' + year), 'Tooltip follows year');
-                    assert(node.querySelector('title').textContent.includes('Total attainment:'), 'Tooltip includes total');
+                    assert(node.getAttribute('aria-label').includes('Year: ' + year), 'Accessible label follows year');
+                    assert(node.getAttribute('aria-label').includes('Total attainment:'), 'Accessible label includes total');
                     if (measure !== 'genderGap') assert(nearly(+node.getAttribute('cy'), 340 * (1 - datum[measure] / 100)), 'Attainment position uses 0–100% axis');
                     const xRatio = +node.getAttribute('cx');
                     if (country === 'United States' && year === 2004) {
@@ -243,6 +243,48 @@ async function runChecks() {
         assert($('year-slider').value === '2018' && $('play-pause').textContent === 'Play', 'Full playback reaches 2018 and stops');
         assert(bubbles().every(node => node.dataset.year === '2018'), 'Final bubbles match the final year');
 
+        // Step 5: tooltips, highlighting and region filters.
+        setStage('Checking tooltips, highlighting and region filters', 94);
+        change('measure-select', 'genderGap');
+        change('year-slider', 2016, 'input');
+        await delay(700);
+        const tip = $('chart-tooltip');
+        const first = bubbles()[0];
+        first.dispatchEvent(new win.PointerEvent('pointerenter', { clientX: 200, clientY: 200, pointerType: 'mouse' }));
+        assert(tip.classList.contains('visible'), 'Hover shows the tooltip');
+        assert(tip.textContent.includes(first.dataset.country) && tip.textContent.includes('2016'), 'Tooltip shows the hovered country and year');
+        assert(doc.querySelector('.bubbles').classList.contains('has-focus') && first.classList.contains('is-focus'), 'Hover highlights the bubble');
+        first.dispatchEvent(new win.PointerEvent('pointerleave', { pointerType: 'mouse' }));
+        assert(!tip.classList.contains('visible'), 'Leaving the bubble hides the tooltip');
+
+        const pick = bubbles().find(node => node.__data__.region === 'Latin America').dataset.country;
+        change('highlight-select', pick);
+        await delay(400);
+        const pinned = bubbles().find(node => node.dataset.country === pick);
+        assert(pinned && pinned.classList.contains('is-pinned'), 'Highlight menu pins a country');
+        assert(doc.querySelector('.country-label')?.textContent === pick, 'Pinned country is labeled');
+        change('year-slider', 2015, 'input');
+        await delay(400);
+        const later = bubbles().find(node => node.dataset.country === pick);
+        assert(later ? later.classList.contains('is-pinned') : $('chart-status').textContent.includes(pick + ' has no data'),
+            'Highlight persists across years');
+        change('year-slider', 2016, 'input');
+        await delay(400);
+        bubbles().find(node => node.dataset.country === pick).dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+        await delay(400);
+        assert($('highlight-select').value === '' && !doc.querySelector('.country-label'), 'Clicking the pinned bubble clears the highlight');
+
+        const before = bubbles().length;
+        const europeButton = [...doc.querySelectorAll('#legend .legend-item')].find(b => b.textContent.startsWith('Europe'));
+        europeButton.click();
+        await delay(600);
+        assert(europeButton.getAttribute('aria-pressed') === 'false', 'Legend button shows the filter is off');
+        assert(bubbles().every(node => node.__data__.region !== 'Europe') && bubbles().length < before, 'Region filter hides European countries');
+        assert($('chart-status').textContent.includes('hidden by the region filter'), 'Status explains the region filter');
+        europeButton.click();
+        await delay(600);
+        assert(bubbles().length === before, 'Turning the region back on restores its countries');
+
         setStage('Checking mobile and desktop layouts', 96);
         for (const width of [375, 768, 1100]) {
             frame.style.width = width + 'px';
@@ -250,7 +292,7 @@ async function runChecks() {
             assert(doc.documentElement.scrollWidth <= doc.documentElement.clientWidth + 1, 'No page overflow at ' + width + 'px');
         }
         assert(failures.length === 0, 'No runtime errors: ' + failures.join('; '));
-        finish('PASS — ' + checks + ' checks; all 60 year/measure combinations, transitions, playback and responsive layout.', true);
+        finish('PASS — ' + checks + ' checks; all 60 year/measure combinations, transitions, playback, tooltips, highlighting, region filters and responsive layout.', true);
     } catch (error) {
         if (finished) return;
         let help = '';

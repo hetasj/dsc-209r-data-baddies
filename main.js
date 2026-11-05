@@ -257,6 +257,19 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     const yearSlider = d3.select("#year-slider");
     const playButton = d3.select("#play-pause");
     const measureSelect = d3.select("#measure-select");
+
+    // Step 5 state: region filters, a highlighted (pinned) country and the
+    // country currently under the pointer or keyboard focus.
+    const regions = ["Europe", "Latin America", "United States"];
+    const activeRegions = new Set(regions);
+    let highlightedCountry = null;
+    let hoveredCountry = null;
+    const highlightSelect = d3.select("#highlight-select");
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "chart-tooltip")
+        .attr("id", "chart-tooltip")
+        .attr("aria-hidden", "true");
+
     const measures = {
         genderGap: {
             label: "Gender gap",
@@ -427,6 +440,8 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .attr("stroke-dasharray", "5,5");
 
     const bubbleLayer = plot.append("g").attr("class", "bubbles");
+    // Step 5: name label that follows the highlighted country.
+    const labelLayer = plot.append("g").attr("class", "country-labels");
     const emptyMessage = plot.append("text")
         .attr("class", "empty-message")
         .attr("x", innerWidth / 2)
@@ -459,18 +474,104 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         ].join("\n");
     }
 
+    //********* STEP 5: Tooltips, country highlighting and region filters *********//
+    const formatGdp = d3.format(",.0f");
+    const signed = d3.format("+.2f");
+
+    // Format one tooltip value, marking interpolated values with an asterisk.
+    function tipValue(d, field) {
+        if (!Number.isFinite(d[field])) return "n/a";
+        const text = field === "genderGap"
+            ? signed(d[field]) + " pp"
+            : d[field].toFixed(2) + "%";
+        return text + (d.estimated[field] ? "*" : "");
+    }
+
+    function tooltipHTML(d) {
+        const measure = measures[currentMeasure];
+        const anyEstimated = ["expenditure", "genderGap", "female", "male", "total"]
+            .some(field => d.estimated[field]);
+        const rows = [
+            ["Spending per secondary student", tipValue(d, "expenditure")],
+            ["Gender gap (F minus M)", tipValue(d, "genderGap")],
+            ["Female attainment", tipValue(d, "female")],
+            ["Male attainment", tipValue(d, "male")],
+            ["Total attainment", tipValue(d, "total")],
+            ["GDP per capita", "$" + formatGdp(d.gdpPerCapita)]
+        ];
+        return `
+            <div class="tt-head">
+                <span class="tt-country">${d.country}</span>
+                <span class="tt-meta"><span class="tt-dot" style="background:${color(d.region)}"></span>${d.region} · ${d.year}</span>
+            </div>
+            <div class="tt-main">${measure.label}: <strong>${tipValue(d, currentMeasure)}</strong></div>
+            <table class="tt-table">${rows.map(([label, value]) =>
+                `<tr><td>${label}</td><td>${value}</td></tr>`).join("")}</table>
+            ${anyEstimated ? '<div class="tt-note">* Estimated by interpolation</div>' : ""}
+            <div class="tt-note">${d.country === highlightedCountry
+                ? "Click to stop following this country" : "Click to follow this country over time"}</div>`;
+    }
+
+    // Keep the tooltip near the pointer without running off the screen.
+    function positionTooltip(clientX, clientY) {
+        const node = tooltip.node();
+        const w = node.offsetWidth, h = node.offsetHeight;
+        let left = clientX + 16;
+        let top = clientY + 16;
+        if (left + w > window.innerWidth - 8) left = clientX - w - 16;
+        if (top + h > window.innerHeight - 8) top = clientY - h - 16;
+        tooltip.style("left", Math.max(8, left) + "px")
+            .style("top", Math.max(8, top) + "px");
+    }
+
+    function showTooltip(d, clientX, clientY) {
+        hoveredCountry = d.country;
+        tooltip.html(tooltipHTML(d)).classed("visible", true);
+        positionTooltip(clientX, clientY);
+        applyHighlight();
+    }
+
+    function hideTooltip() {
+        hoveredCountry = null;
+        tooltip.classed("visible", false);
+        applyHighlight();
+    }
+
+    // Dim every bubble except the hovered or highlighted country.
+    function applyHighlight() {
+        const focus = hoveredCountry || highlightedCountry;
+        bubbleLayer.classed("has-focus", focus !== null);
+        bubbleLayer.selectAll("circle")
+            .classed("is-focus", d => d.country === focus)
+            .classed("is-pinned", d => d.country === highlightedCountry);
+    }
+
+    function setHighlight(country) {
+        highlightedCountry = country;
+        highlightSelect.property("value", country || "");
+        updateChart(300);
+    }
+
+    function toggleHighlight(country) {
+        setHighlight(highlightedCountry === country ? null : country);
+    }
+
     //********* STEP 3: Year animation and smooth chart updates *********//
     // This same update function also handles the measure selector (step 4).
     function updateChart(duration = 600) {
         if (reducedMotion.matches) duration = 0;
         const measure = measures[currentMeasure];
         const isGap = currentMeasure === "genderGap";
-        const yearData = chartData.filter(d =>
+        const availableData = chartData.filter(d =>
             d.year === currentYear &&
             Number.isFinite(d.expenditure) &&
             Number.isFinite(d[currentMeasure]) &&
             Number.isFinite(d.gdpPerCapita) && d.gdpPerCapita >= 0
-        ).sort((a, b) => d3.descending(a.gdpPerCapita, b.gdpPerCapita));
+        );
+        // Step 5: the region filter removes countries from deselected regions.
+        const yearData = availableData
+            .filter(d => activeRegions.has(d.region))
+            .sort((a, b) => d3.descending(a.gdpPerCapita, b.gdpPerCapita));
 
         // Cancel stale transitions so rapid scrubbing never queues old years.
         svg.interrupt("chart");
@@ -507,8 +608,29 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
             .attr("fill-opacity", 0.72)
             .attr("stroke", d => d3.color(color(d.region)).darker(0.7))
             .attr("stroke-width", 1.2)
-            .style("cursor", "help");
-        entering.append("title");
+            .style("cursor", "pointer")
+            // Step 5: details on demand and click-to-highlight.
+            .on("pointerenter", (event, d) => showTooltip(d, event.clientX, event.clientY))
+            .on("pointermove", event => positionTooltip(event.clientX, event.clientY))
+            .on("pointerleave", event => {
+                // On touch screens keep the tooltip until the user taps elsewhere.
+                if (event.pointerType !== "touch") hideTooltip();
+            })
+            .on("focus", function (event, d) {
+                const box = this.getBoundingClientRect();
+                showTooltip(d, box.right, box.top);
+            })
+            .on("blur", hideTooltip)
+            .on("click", (event, d) => {
+                event.stopPropagation();
+                toggleHighlight(d.country);
+            })
+            .on("keydown", (event, d) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleHighlight(d.country);
+                }
+            });
 
         const activeBubbles = entering.merge(bubbles).order()
             .style("pointer-events", "auto")
@@ -517,23 +639,57 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
             .attr("data-country", d => d.country)
             .attr("data-year", currentYear)
             .attr("data-measure", currentMeasure);
-        activeBubbles.select("title").text(tooltipText);
         animate(activeBubbles)
             .attr("cx", d => x(d.expenditure))
             .attr("cy", d => y(d[currentMeasure]))
             .attr("r", d => radius(d.gdpPerCapita))
             .attr("opacity", 1);
 
+        // Step 5: draw the highlighted country on top and label it.
+        activeBubbles.filter(d => d.country === highlightedCountry).raise();
+        const labels = labelLayer.selectAll("text")
+            .data(yearData.filter(d => d.country === highlightedCountry), d => d.country);
+        labels.exit().remove();
+        const labelY = d => y(d[currentMeasure]) - radius(d.gdpPerCapita) - 6;
+        const enteringLabels = labels.enter().append("text")
+            .attr("class", "country-label")
+            .attr("x", d => x(d.expenditure))
+            .attr("y", labelY)
+            .text(d => d.country);
+        animate(enteringLabels.merge(labels))
+            .attr("x", d => x(d.expenditure))
+            .attr("y", labelY);
+        applyHighlight();
+
+        // Keep an open tooltip in sync with the new year or measure.
+        if (hoveredCountry !== null) {
+            const hovered = yearData.find(d => d.country === hoveredCountry);
+            if (hovered) tooltip.html(tooltipHTML(hovered));
+            else hideTooltip();
+        }
+
         d3.select("#year-display").text(currentYear);
         yearSlider.property("value", currentYear).attr("aria-valuetext", String(currentYear));
         d3.select("#measure-description").text(measure.description);
         svg.attr("aria-label", measure.label + " by government expenditure in " + currentYear);
-        emptyMessage.style("display", yearData.length ? "none" : null);
-        d3.select("#chart-status").text(
-            yearData.length + " of " + countries.length + " countries shown for " +
+        emptyMessage
+            .text(activeRegions.size === 0
+                ? "Select at least one region in the legend to show countries."
+                : "No countries have all required values for this year and measure.")
+            .style("display", yearData.length ? "none" : null);
+        let status = yearData.length + " of " + countries.length + " countries shown for " +
             currentYear + ". Countries missing expenditure, GDP per capita or " +
-            measure.label.toLowerCase() + " are omitted."
-        );
+            measure.label.toLowerCase() + " are omitted.";
+        const filteredOut = availableData.length - yearData.length;
+        if (filteredOut > 0) {
+            status += " " + filteredOut + (filteredOut === 1 ? " country is" : " countries are") +
+                " hidden by the region filter.";
+        }
+        if (highlightedCountry !== null &&
+            !availableData.some(d => d.country === highlightedCountry)) {
+            status += " " + highlightedCountry + " has no data for this view in " + currentYear + ".";
+        }
+        d3.select("#chart-status").text(status);
     }
 
     function pausePlayback() {
@@ -585,30 +741,57 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     measureSelect.property("disabled", false);
 
     // CREATE THE REGION LEGEND
-    const regions = [
-        "Europe",
-        "Latin America",
-        "United States"
-    ];
-    //// Create one legend item for each region
+    // Step 5: each legend item is also a toggle button that filters by region.
+    const countriesPerRegion = d3.rollup(countries, v => v.length, c => regionByCountry[c]);
     const legend = d3.select("#legend")
         .selectAll(".legend-item")
         .data(regions)
-        .join("div")
-        .attr("class", "legend-item");
+        .join("button")
+        .attr("type", "button")
+        .attr("class", "legend-item")
+        .attr("aria-pressed", "true")
+        .attr("title", d => "Show or hide " + d)
+        .on("click", function (event, region) {
+            if (activeRegions.has(region)) activeRegions.delete(region);
+            else activeRegions.add(region);
+            d3.select(this).attr("aria-pressed", activeRegions.has(region));
+            updateChart(400);
+        });
 
     //// Add the colored circle.
     legend.append("span")
         .attr("class", "legend-color")
-        .style("background-color", d => color(d));
+        .style("background-color", d => color(d))
+        .style("border-color", d => color(d));
 
-    //// Add the region name.
+    //// Add the region name and its number of countries.
     legend.append("span")
+        .attr("class", "legend-label")
+        .text(d => d + " (" + (countriesPerRegion.get(d) || 0) + ")");
+
+    // Step 5: country highlight menu, sorted alphabetically.
+    highlightSelect.selectAll("option.country-option")
+        .data([...countries].sort(d3.ascending))
+        .join("option")
+        .attr("class", "country-option")
+        .attr("value", d => d)
         .text(d => d);
+    highlightSelect
+        .on("change", event => setHighlight(event.target.value || null))
+        .property("disabled", false);
+
+    // Clicking empty chart space clears the highlight and any touch tooltip.
+    svg.on("click", () => {
+        hideTooltip();
+        if (highlightedCountry !== null) setHighlight(null);
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") hideTooltip();
+    });
 
 }).catch(error => {
     console.error("Unable to load the education chart:", error);
-    d3.selectAll("#year-slider, #play-pause, #measure-select").property("disabled", true);
+    d3.selectAll("#year-slider, #play-pause, #measure-select, #highlight-select").property("disabled", true);
     d3.select("#chart-status").attr("role", "alert").text(
         "The chart could not load. Keep combined-fourteen-countries.csv beside index.html " +
         "and main.js, and open the project through a local web server. " + error.message

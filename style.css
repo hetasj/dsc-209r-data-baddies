@@ -179,6 +179,179 @@ input:focus-visible,
     text-anchor: middle;
 }
 
+/********** Step 5: tooltips, highlighting and region filters ***********/
+.measure-controls {
+    flex-wrap: wrap;
+    gap: 12px 28px;
+}
+
+.control-pair {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#highlight-select {
+    color: #593f55;
+    background: white;
+    max-width: 100%;
+}
+
+/* Legend items are toggle buttons */
+#legend .legend-item {
+    min-height: 44px;
+    padding: 6px 16px;
+    background: white;
+    border: 1px solid rgb(225, 200, 220);
+    border-radius: 999px;
+    color: rgb(110, 89, 106);
+    font-size: 15px;
+}
+
+#legend .legend-item:hover {
+    border-color: rgb(180, 70, 156);
+}
+
+.legend-color {
+    box-sizing: border-box;
+    border: 2px solid;
+}
+
+#legend .legend-item[aria-pressed="false"] {
+    opacity: 0.55;
+}
+
+#legend .legend-item[aria-pressed="false"] .legend-color {
+    background-color: transparent !important;
+}
+
+#legend .legend-item[aria-pressed="false"] .legend-label {
+    text-decoration: line-through;
+}
+
+.interaction-hint {
+    margin-top: 0;
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Dim other countries while one is hovered or highlighted */
+.country-bubble {
+    transition: opacity 0.15s;
+}
+
+.bubbles.has-focus .country-bubble:not(.is-focus) {
+    opacity: 0.18;
+}
+
+/* No browser focus box when a bubble is clicked with the mouse.
+   Keyboard users still get the :focus-visible outline. */
+.country-bubble:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.country-bubble.is-focus,
+.country-bubble.is-pinned {
+    stroke: #3d2438;
+    stroke-width: 2.5px;
+}
+
+.country-label {
+    font-family: Garamond, serif;
+    font-size: 14px;
+    font-weight: bold;
+    fill: #3d2438;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: white;
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+/* Tooltip */
+.chart-tooltip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    width: 270px;
+    padding: 10px 12px;
+    background: white;
+    border: 1px solid rgb(225, 200, 220);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(60, 30, 55, 0.15);
+    font-family: Garamond, serif;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #4a3546;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s;
+}
+
+.chart-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.tt-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.tt-country {
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.tt-meta,
+.tt-note {
+    font-size: 12px;
+    color: #8a7385;
+}
+
+.tt-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 5px;
+    border-radius: 50%;
+}
+
+.tt-main {
+    margin: 6px 0;
+}
+
+.tt-main strong {
+    font-size: 19px;
+    color: rgb(180, 70, 156);
+}
+
+.tt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tt-table td {
+    padding: 1px 0;
+}
+
+.tt-table td:last-child {
+    padding-left: 10px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.tt-note {
+    margin-top: 4px;
+}
+
 @media (max-width: 600px) {
     body { margin: 20px 16px; }
     .year-controls { flex-wrap: wrap; gap: 8px; }

@@ -49,17 +49,27 @@
             <p id="animation-help" class="chart-note">Drag the slider or press Play. Moving the slider pauses playback. Play again at 2018 to restart.</p>
             <!-- Step 4: choose which measure appears on the vertical axis. -->
             <div class="measure-controls">
-                <label for="measure-select">Show</label>
-                <select id="measure-select" aria-describedby="measure-description" disabled>
-                    <option value="genderGap">Gender gap</option>
-                    <option value="female">Female attainment</option>
-                    <option value="male">Male attainment</option>
-                    <option value="total">Total attainment</option>
-                </select>
+                <span class="control-pair">
+                    <label for="measure-select">Show</label>
+                    <select id="measure-select" aria-describedby="measure-description" disabled>
+                        <option value="genderGap">Gender gap</option>
+                        <option value="female">Female attainment</option>
+                        <option value="male">Male attainment</option>
+                        <option value="total">Total attainment</option>
+                    </select>
+                </span>
+                <!-- Step 5: follow one country through the animation. -->
+                <span class="control-pair">
+                    <label for="highlight-select">Highlight</label>
+                    <select id="highlight-select" disabled>
+                        <option value="">None</option>
+                    </select>
+                </span>
             </div>
             <p id="measure-description" class="chart-note">Female minus male attainment, in percentage points. Positive values mean higher female attainment.</p>
-            <!-- Legend explaining the three region colors -->
-            <div id="legend"></div>
+            <!-- Legend explaining the three region colors. Step 5: click to filter by region. -->
+            <div id="legend" role="group" aria-label="Filter by region"></div>
+            <p class="chart-note interaction-hint">Hover over a bubble for details. Click a bubble or use Highlight to follow a country over time. Click a region above to show or hide it.</p>
             <!-- D3 will insert the SVG chart here -->
             <div id="bubble-chart"></div>
             <p id="chart-status" class="chart-note" role="status">Loading chart data...</p>
