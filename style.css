@@ -352,6 +352,123 @@ input:focus-visible,
     margin-top: 4px;
 }
 
+/********** Step 6: key findings and linked line chart ***********/
+#story {
+    max-width: 860px;
+    margin: 0 auto 36px;
+    padding: 20px 24px;
+    background: #fbf5fa;
+    border: 1px solid rgb(235, 215, 230);
+    border-radius: 12px;
+    text-align: center;
+}
+
+#story h2 {
+    margin: 0 0 14px;
+    font-size: 22px;
+}
+
+#story-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.story-button {
+    min-height: 44px;
+    padding: 8px 16px;
+    color: #90377d;
+    background: white;
+    border: 1px solid rgb(180, 70, 156);
+    border-radius: 999px;
+    font-size: 15px;
+}
+
+.story-button:hover {
+    background: #f6e6f2;
+}
+
+.story-button[aria-pressed="true"] {
+    color: white;
+    background: #90377d;
+}
+
+.story-caption {
+    min-height: 3em;
+    margin: 16px auto 0;
+    max-width: 700px;
+    font-size: 17px;
+    line-height: 1.5;
+    color: #4a3546;
+}
+
+.story-reset {
+    margin-top: 10px;
+    color: #593f55;
+    background: white;
+    font-size: 14px;
+}
+
+.line-title {
+    margin-top: 48px;
+    text-align: center;
+}
+
+#line-chart svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+}
+
+.line-background {
+    fill: transparent;
+    cursor: crosshair;
+}
+
+.country-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-opacity: 0.6;
+    pointer-events: none;
+    transition: stroke-opacity 0.15s, stroke-width 0.15s;
+}
+
+.line-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 12;
+    cursor: pointer;
+}
+
+.lines.has-focus .country-line-group:not(.is-focus) .country-line {
+    stroke-opacity: 0.12;
+}
+
+.country-line-group.is-focus .country-line {
+    stroke-opacity: 1;
+    stroke-width: 3.5;
+}
+
+.year-marker {
+    stroke: rgb(180, 70, 156);
+    stroke-width: 2;
+    stroke-opacity: 0.5;
+    pointer-events: none;
+}
+
+.line-label {
+    font-family: Garamond, serif;
+    font-size: 14px;
+    font-weight: bold;
+    paint-order: stroke;
+    stroke: white;
+    stroke-width: 4px;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
 @media (max-width: 600px) {
     body { margin: 20px 16px; }
     .year-controls { flex-wrap: wrap; gap: 8px; }

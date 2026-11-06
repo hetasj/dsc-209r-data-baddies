@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <title>Project 3 browser checks</title>
 <style>body { font: 15px system-ui; margin: 20px; } iframe { width: 1100px; height: 1100px; border: 1px solid #ddd; } pre { white-space: pre-wrap; } #result { padding: 16px; background: #f5f1f5; } #progress { width: min(100%, 500px); }</style>
-<h1>Steps 3 to 5: browser checks</h1>
+<h1>Steps 3 to 6: browser checks</h1>
 <p>This page tests the chart automatically. To use the chart yourself, <a href="../index.html">open index.html</a>.</p>
 <p>Checks usually take 40–60 seconds. Keep this tab visible and do not change the chart controls during the test.</p>
 <progress id="progress" max="100" value="0" aria-label="Test progress"></progress>
@@ -285,6 +285,37 @@ async function runChecks() {
         await delay(600);
         assert(bubbles().length === before, 'Turning the region back on restores its countries');
 
+        // Step 6: linked line chart and key findings.
+        setStage('Checking the line chart and key findings', 95);
+        const lines = () => [...doc.querySelectorAll('.country-line-group')];
+        assert(lines().length === 14, 'Line chart draws one line per country');
+        assert(Boolean(doc.querySelector('.year-marker')), 'Line chart marks the current year');
+        const storyButtonsList = [...doc.querySelectorAll('.story-button')];
+        assert(storyButtonsList.length === 6, 'Six key findings are offered');
+        const sameSpend = storyButtonsList.find(b => b.textContent.startsWith('Same spending'));
+        sameSpend.click();
+        await delay(800);
+        assert($('year-slider').value === '2016' && $('measure-select').value === 'genderGap', 'Finding sets year and measure');
+        const labels = [...doc.querySelectorAll('.country-label')].map(n => n.textContent).sort();
+        assert(labels.join(',') === 'Romania,Uruguay', 'Finding labels its countries: ' + labels);
+        assert(lines().filter(g => g.classList.contains('is-focus')).length === 2, 'Finding highlights the same countries in the line chart');
+        assert($('story-caption').textContent.includes('Uruguay'), 'Finding shows its caption');
+        const dr = storyButtonsList.find(b => b.textContent.startsWith('A data warning'));
+        dr.click();
+        await delay(800);
+        assert($('measure-select').value === 'female' && bubbles().some(n => n.dataset.country === 'Dominican Republic'), 'Data warning shows the Dominican Republic');
+        $('story-reset').click();
+        await delay(400);
+        assert(!doc.querySelector('.country-label') && $('story-reset').hidden, 'Reset returns to free exploration');
+        // Clicking a line pins that country in both charts.
+        lines().find(g => g.__data__[0] === 'Germany').querySelector('.line-hit')
+            .dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+        await delay(400);
+        assert($('highlight-select').value === 'Germany', 'Clicking a line highlights the country');
+        $('highlight-select').value = '';
+        $('highlight-select').dispatchEvent(new win.Event('change', { bubbles: true }));
+        await delay(400);
+
         setStage('Checking mobile and desktop layouts', 96);
         for (const width of [375, 768, 1100]) {
             frame.style.width = width + 'px';
@@ -292,7 +323,7 @@ async function runChecks() {
             assert(doc.documentElement.scrollWidth <= doc.documentElement.clientWidth + 1, 'No page overflow at ' + width + 'px');
         }
         assert(failures.length === 0, 'No runtime errors: ' + failures.join('; '));
-        finish('PASS — ' + checks + ' checks; all 60 year/measure combinations, transitions, playback, tooltips, highlighting, region filters and responsive layout.', true);
+        finish('PASS — ' + checks + ' checks; all 60 year/measure combinations, transitions, playback, tooltips, highlighting, region filters, line chart, key findings and responsive layout.', true);
     } catch (error) {
         if (finished) return;
         let help = '';

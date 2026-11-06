@@ -35,6 +35,13 @@
         
         <!-- Main visualization container -->
         <div id="chart">
+            <!-- Step 6: guided key findings -->
+            <section id="story" aria-labelledby="story-title">
+                <h2 id="story-title">Key findings</h2>
+                <div id="story-buttons" role="group" aria-label="Key findings"></div>
+                <p id="story-caption" class="story-caption" aria-live="polite">Pick a finding to see it on the charts, or explore freely with the controls below.</p>
+                <button id="story-reset" type="button" class="story-reset" hidden>Back to free exploration</button>
+            </section>
             <!-- Current year displayed above the chart -->
             <output id="year-display" for="year-slider">2004</output>
             <!-- Step 3: move through the years manually or play the animation. -->
@@ -73,6 +80,10 @@
             <!-- D3 will insert the SVG chart here -->
             <div id="bubble-chart"></div>
             <p id="chart-status" class="chart-note" role="status">Loading chart data...</p>
+            <!-- Step 6: linked line chart -->
+            <h2 class="line-title">Every country over time</h2>
+            <p class="chart-note">Each line is one country's selected measure from 2004 to 2018. The vertical line marks the year shown above. Click a line to highlight that country in both charts, or click anywhere else to jump to that year. Breaks in a line are missing years.</p>
+            <div id="line-chart"></div>
             <p class="chart-note">Bubble area represents GDP per capita. Attainment is the share of adults aged 25+ who have completed at least upper secondary education. Gaps of up to two years are estimated only between available observations; tooltips identify estimated values.</p>
 
         </div>

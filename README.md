@@ -1,4 +1,4 @@
-# Project 3: Steps 0 to 5 (Safia, Jade, Heta)
+# Project 3: Steps 0 to 6 (Safia, Jade, Heta)
 
 This extends the supplied `index.html`, `style.css` and D3 `main.js` with year animation and a measure selector. The matching `combined-fourteen-countries.csv` is included.
 
@@ -66,6 +66,18 @@ The supplied data preparation is retained: only missing gaps of at most two year
 - **Country highlighting:** hovering a bubble dims the others. Clicking a bubble (or Enter/Space when focused), or choosing a country from the Highlight menu, pins that country: it stays outlined and labeled through year and measure changes. Clicking it again, choosing None, or clicking empty chart space clears it. If the pinned country has no data for a year, the status line says so.
 - **Region filters:** the legend items are toggle buttons. Clicking a region hides or shows its countries, and the status line reports how many are hidden by the filter.
 - The browser check now also covers tooltips, highlighting and region filters.
+
+## Step 6: key findings and linked line chart (Heta)
+
+- **Key findings:** six buttons above the chart walk readers through the main patterns. Each one sets the year and measure, labels the countries involved in both charts, and shows a short explanation:
+  1. Gaps moved toward women in 10 of 14 countries.
+  2. In 2014, men led in all 7 European countries, while women led in 4 of 6 Latin American countries.
+  3. Uruguay and Romania spent almost the same in 2016 but had opposite gaps.
+  4. Germany's male lead shrank from 14.9 to 6.8 points, the largest change.
+  5. Sweden is the only country that moved clearly toward men.
+  6. A data warning: the Dominican Republic jumps 12 to 15 points in one year (2015 to 2016), most likely a data collection change.
+- **Linked line chart:** shows every country's selected measure from 2004 to 2018, with a marker for the current year. Hovering a line shows the tooltip, clicking a line highlights that country in both charts, and clicking elsewhere jumps to that year. It follows the measure selector, region filters and highlight.
+- The browser check now also covers the line chart and key findings.
 
 ## Files and checks
 

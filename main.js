@@ -538,18 +538,171 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     }
 
     // Dim every bubble except the hovered or highlighted country.
+    // Step 6: countries featured by the selected key finding.
+    let storyCountries = [];
+
+    // Countries that stay emphasized: the hovered one, otherwise the pinned
+    // country plus any countries featured by the current key finding.
+    function focusSet() {
+        if (hoveredCountry) return new Set([hoveredCountry]);
+        const set = new Set(storyCountries);
+        if (highlightedCountry) set.add(highlightedCountry);
+        return set;
+    }
+
+    function labeledCountries() {
+        const set = new Set(storyCountries);
+        if (highlightedCountry) set.add(highlightedCountry);
+        return set;
+    }
+
+    // Dim every bubble and line except the focused countries.
     function applyHighlight() {
-        const focus = hoveredCountry || highlightedCountry;
-        bubbleLayer.classed("has-focus", focus !== null);
+        const focus = focusSet();
+        bubbleLayer.classed("has-focus", focus.size > 0);
         bubbleLayer.selectAll("circle")
-            .classed("is-focus", d => d.country === focus)
+            .classed("is-focus", d => focus.has(d.country))
             .classed("is-pinned", d => d.country === highlightedCountry);
+        styleLines();
     }
 
     function setHighlight(country) {
         highlightedCountry = country;
+        storyCountries = [];
+        clearStorySelection();
         highlightSelect.property("value", country || "");
         updateChart(300);
+    }
+
+    //********* STEP 6: Linked line chart of each country over time *********//
+    const lineWidth = 800;
+    const lineHeight = 300;
+    const lineMargin = { top: 20, right: 140, bottom: 45, left: 95 };
+    const lineInnerWidth = lineWidth - lineMargin.left - lineMargin.right;
+    const lineInnerHeight = lineHeight - lineMargin.top - lineMargin.bottom;
+
+    const lx = d3.scaleLinear().domain([startYear, endYear]).range([0, lineInnerWidth]);
+    const ly = d3.scaleLinear().range([lineInnerHeight, 0]);
+    const seriesByCountry = d3.group(chartData, d => d.country);
+
+    const lineSvg = d3.select("#line-chart").append("svg")
+        .attr("viewBox", `0 0 ${lineWidth} ${lineHeight}`)
+        .attr("role", "group")
+        .attr("aria-label", "Line chart of each country's selected measure from 2004 to 2018");
+    const lplot = lineSvg.append("g")
+        .attr("transform", `translate(${lineMargin.left},${lineMargin.top})`);
+
+    // Background that sets the year when clicked.
+    lplot.append("rect")
+        .attr("class", "line-background")
+        .attr("width", lineInnerWidth)
+        .attr("height", lineInnerHeight)
+        .on("click", event => {
+            event.stopPropagation();
+            const year = Math.round(lx.invert(d3.pointer(event)[0]));
+            pausePlayback();
+            currentYear = Math.max(startYear, Math.min(endYear, year));
+            updateChart(300);
+        });
+
+    const lineYGrid = lplot.append("g").attr("class", "grid");
+    lplot.append("g")
+        .attr("transform", `translate(0,${lineInnerHeight})`)
+        .call(d3.axisBottom(lx).ticks(8).tickFormat(d3.format("d")));
+    const lineYAxis = lplot.append("g");
+    const lineYLabel = lplot.append("text")
+        .attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -lineInnerHeight / 2)
+        .attr("y", -65)
+        .attr("text-anchor", "middle");
+    lplot.append("text")
+        .attr("class", "axis-label")
+        .attr("x", lineInnerWidth / 2)
+        .attr("y", lineInnerHeight + 40)
+        .attr("text-anchor", "middle")
+        .text("Year");
+    const lineZero = lplot.append("line")
+        .attr("class", "zero-line")
+        .attr("x1", 0).attr("x2", lineInnerWidth)
+        .attr("stroke", "#777").attr("stroke-width", 1.5).attr("stroke-dasharray", "5,5");
+    const yearMarker = lplot.append("line")
+        .attr("class", "year-marker")
+        .attr("y1", 0).attr("y2", lineInnerHeight);
+    const lineLayer = lplot.append("g").attr("class", "lines");
+    const lineLabelLayer = lplot.append("g").attr("class", "line-labels");
+
+    const lineGenerator = d3.line()
+        .defined(d => Number.isFinite(d[currentMeasure]))
+        .x(d => lx(d.year))
+        .y(d => ly(d[currentMeasure]));
+
+    function styleLines() {
+        const focus = focusSet();
+        lineLayer.classed("has-focus", focus.size > 0);
+        lineLayer.selectAll(".country-line-group")
+            .classed("is-focus", d => focus.has(d[0]))
+            .filter(d => focus.has(d[0])).raise();
+
+        // Label each focused line at its last available point.
+        const labeled = [...focus].map(country => {
+            const points = (seriesByCountry.get(country) || [])
+                .filter(d => Number.isFinite(d[currentMeasure]) && activeRegions.has(d.region));
+            return points.length ? points[points.length - 1] : null;
+        }).filter(Boolean);
+        lineLabelLayer.selectAll("text")
+            .data(labeled, d => d.country)
+            .join("text")
+            .attr("class", "line-label")
+            .attr("x", d => lx(d.year) + 6)
+            .attr("y", d => ly(d[currentMeasure]) + 4)
+            .attr("fill", d => d3.color(color(d.region)).darker(0.8))
+            .text(d => d.country);
+    }
+
+    function updateLineChart() {
+        const isGap = currentMeasure === "genderGap";
+        ly.domain(y.domain());
+        lineYAxis.call(d3.axisLeft(ly).ticks(6)
+            .tickFormat(isGap ? d3.format(".0f") : value => value + "%"));
+        lineYGrid.call(d3.axisLeft(ly).ticks(6).tickSize(-lineInnerWidth).tickFormat(""))
+            .call(g => g.select(".domain").remove());
+        lineYLabel.text(isGap ? "Gender gap (percentage points)" : measures[currentMeasure].label + " (%)");
+        lineZero.attr("y1", ly(0)).attr("y2", ly(0)).attr("opacity", isGap ? 1 : 0);
+        yearMarker.attr("x1", lx(currentYear)).attr("x2", lx(currentYear));
+
+        const series = [...seriesByCountry]
+            .filter(([, rows]) => activeRegions.has(rows[0].region));
+        const groups = lineLayer.selectAll(".country-line-group")
+            .data(series, d => d[0])
+            .join(enter => {
+                const g = enter.append("g").attr("class", "country-line-group");
+                g.append("path").attr("class", "country-line");
+                // Wider invisible path makes thin lines easy to hover and click.
+                g.append("path").attr("class", "line-hit")
+                    .on("pointermove", (event, [country, rows]) => {
+                        const year = Math.round(lx.invert(d3.pointer(event, lplot.node())[0]));
+                        const datum = rows.find(d => d.year === year && Number.isFinite(d[currentMeasure]));
+                        hoveredCountry = country;
+                        if (datum) {
+                            tooltip.html(tooltipHTML(datum)).classed("visible", true);
+                            positionTooltip(event.clientX, event.clientY);
+                        }
+                        applyHighlight();
+                    })
+                    .on("pointerleave", hideTooltip)
+                    .on("click", (event, [country]) => {
+                        event.stopPropagation();
+                        toggleHighlight(country);
+                    });
+                return g;
+            });
+        groups.select(".country-line")
+            .attr("stroke", ([, rows]) => color(rows[0].region))
+            .attr("d", ([, rows]) => lineGenerator(rows));
+        groups.select(".line-hit")
+            .attr("d", ([, rows]) => lineGenerator(rows));
+        styleLines();
     }
 
     function toggleHighlight(country) {
@@ -646,9 +799,10 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
             .attr("opacity", 1);
 
         // Step 5: draw the highlighted country on top and label it.
-        activeBubbles.filter(d => d.country === highlightedCountry).raise();
+        const labeled = labeledCountries();
+        activeBubbles.filter(d => labeled.has(d.country)).raise();
         const labels = labelLayer.selectAll("text")
-            .data(yearData.filter(d => d.country === highlightedCountry), d => d.country);
+            .data(yearData.filter(d => labeled.has(d.country)), d => d.country);
         labels.exit().remove();
         const labelY = d => y(d[currentMeasure]) - radius(d.gdpPerCapita) - 6;
         const enteringLabels = labels.enter().append("text")
@@ -659,6 +813,8 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         animate(enteringLabels.merge(labels))
             .attr("x", d => x(d.expenditure))
             .attr("y", labelY);
+        // Step 6: keep the linked line chart in sync.
+        updateLineChart();
         applyHighlight();
 
         // Keep an open tooltip in sync with the new year or measure.
@@ -779,6 +935,87 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     highlightSelect
         .on("change", event => setHighlight(event.target.value || null))
         .property("disabled", false);
+
+    //********* STEP 6: Key findings (guided story) *********//
+    // Each finding sets the year, measure and featured countries, then
+    // explains what to look for. All numbers come from the World Bank data.
+    const stories = [
+        {
+            label: "Gaps moved toward women",
+            year: 2018, measure: "genderGap", countries: [],
+            text: "Between each country's first and last available year, the gender gap moved toward women in 10 of the 14 countries. The United States, Ecuador and the Dominican Republic stayed within half a point, and Sweden moved toward men. In the line chart below, most lines slope upward."
+        },
+        {
+            label: "Europe vs. Latin America",
+            year: 2014, measure: "genderGap", countries: [],
+            text: "In 2014, men had higher attainment in all 7 European countries, while women had higher attainment in 4 of the 6 Latin American countries. In the line chart, the European lines sit below the zero line."
+        },
+        {
+            label: "Same spending, opposite gaps",
+            year: 2016, measure: "genderGap", countries: ["Uruguay", "Romania"],
+            text: "In 2016, Uruguay and Romania spent almost the same per secondary student (15.9% and 15.2% of GDP per capita). Yet women led by 7.1 points in Uruguay, while men led by 10.7 points in Romania. Spending alone does not predict the gap."
+        },
+        {
+            label: "Germany's big shift",
+            year: 2018, measure: "genderGap", countries: ["Germany"],
+            text: "Men in Germany led by 14.9 percentage points in 2004. By 2018, the lead had shrunk to 6.8 points, the largest change of any country in our data."
+        },
+        {
+            label: "Sweden, the exception",
+            year: 2017, measure: "genderGap", countries: ["Sweden"],
+            text: "Sweden is the only country that moved clearly toward men: from women ahead by 3.2 points in 2004 to men ahead by 0.7 points in 2017."
+        },
+        {
+            label: "A data warning",
+            year: 2016, measure: "female", countries: ["Dominican Republic"],
+            text: "In the Dominican Republic, female attainment jumps from 38.2% in 2015 to 50.9% in 2016, and male attainment from 31.3% to 46.1%. A jump this large in one year most likely reflects a change in how the data was collected, so we treat 2016 with caution."
+        }
+    ];
+    const defaultCaption = d3.select("#story-caption").text();
+
+    const storyButtons = d3.select("#story-buttons")
+        .selectAll("button")
+        .data(stories)
+        .join("button")
+        .attr("type", "button")
+        .attr("class", "story-button")
+        .attr("aria-pressed", "false")
+        .text(d => d.label)
+        .on("click", (event, story) => {
+            const isActive = d3.select(event.currentTarget).attr("aria-pressed") === "true";
+            if (isActive) {
+                clearStory();
+                return;
+            }
+            pausePlayback();
+            regions.forEach(region => activeRegions.add(region));
+            legend.attr("aria-pressed", "true");
+            highlightedCountry = null;
+            highlightSelect.property("value", "");
+            storyCountries = story.countries;
+            currentYear = story.year;
+            currentMeasure = story.measure;
+            measureSelect.property("value", story.measure);
+            storyButtons.attr("aria-pressed", d => d === story);
+            d3.select("#story-caption").text(story.text);
+            d3.select("#story-reset").property("hidden", false);
+            updateChart(600);
+        });
+
+    function clearStorySelection() {
+        storyButtons.attr("aria-pressed", "false");
+        d3.select("#story-caption").text(defaultCaption);
+        d3.select("#story-reset").property("hidden", true);
+    }
+
+    function clearStory() {
+        storyCountries = [];
+        clearStorySelection();
+        updateChart(300);
+    }
+
+    d3.select("#story-reset").on("click", clearStory);
+    updateChart(0);
 
     // Clicking empty chart space clears the highlight and any touch tooltip.
     svg.on("click", () => {
