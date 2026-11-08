@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -88,9 +88,51 @@
 
         </div>
         <!-- Script import -->
+        <!-- Step 6: write-up -->
+        <section id="writeup" aria-labelledby="writeup-title">
+            <h2 id="writeup-title">Write-up</h2>
+
+            <h3>Motivation</h3>
+            <p>Women now complete upper-secondary education at higher rates than men in many countries, but the size and direction of the gap differ widely. In this project we explored the question of how government spending per secondary student relates to these gaps across the United States, Europe, and Latin America from 2004 to 2018.</p>
+
+            <h3>Data, Variables, and Transformations</h3>
+            <p>For our data we used World Bank indicators for 14 countries: the United States, seven European countries (Bulgaria, Denmark, France, Germany, Netherlands, Romania, Sweden), and six Latin American countries (Brazil, Colombia, Dominican Republic, Ecuador, Mexico, Uruguay). The indicators were merged into one file using country name, country code, and year.</p>
+            <p>We define the gender gap as female attainment minus male attainment, in percentage points. A positive value means higher female attainment, and a negative value means higher male attainment. We only calculate the gap when both rates are available for the same country and year.</p>
+            <p>To handle missing data, we filled gaps of one or two years with linear interpolation, but only when real observations existed on both sides. We did not extrapolate values at the start or end of a series, and we did not interpolate GDP per capita. Interpolated values are marked with an asterisk in the tooltip so readers can tell them apart from original observations.</p>
+            <p>A country appears in a given year only when spending, GDP, and the selected measure are all available, so some years show fewer countries. The status line under the chart reports how many countries are shown. We also noticed that the Dominican Republic's attainment rates jump 12 to 15 points between 2015 and 2016. This most likely reflects a change in data collection, so we flag it in our key findings instead of presenting it as real progress.</p>
+
+            <h3>Visual Encodings</h3>
+            <p>The main view is a bubble chart. The x-axis shows government spending per secondary student as a percentage of GDP per capita, which we chose because it is specific to the education level we study. The y-axis shows the selected measure. For the gender gap, the axis is symmetric around zero, with a dashed line marking parity, and the attainment views use a 0 to 100% axis.</p>
+            <p>Bubble area represents GDP per capita, using a square-root scale so that area, not radius, is proportional to GDP. Color represents the region, with three distinct hues for Europe, Latin America, and the United States. The axes and bubble sizes stay the same across all years, so any movement reflects an actual change rather than a change in scale.</p>
+            <p>Below the bubble chart, a line chart shows each country's selected measure from 2004 to 2018 in the same region colors, with a vertical marker for the current year. This shows the full trend for every country at once, which the animation alone cannot. The visualization is built entirely with D3.js.</p>
+
+            <h3>Interaction Design</h3>
+            <p>We made sure each interaction gives the reader information they could not get from a static chart. Each one answers a specific question a reader would have about the data.</p>
+            <p>The Key findings section answers "what should I notice?" With 14 countries, 15 years, and four measures, the most important patterns are easy to miss. Each of the six buttons sets the year and measure, labels the relevant countries, and explains the pattern, so readers see the takeaways directly instead of having to search for them.</p>
+            <p>The year slider and Play button answer "how did this change over time?" Our data covers 15 years, and showing them all at once in the bubble chart would stack 15 bubbles per country on top of each other. Animation keeps one year on screen while still showing the change, and the slider lets readers stop on a specific year.</p>
+            <p>The measure selector answers "where does the gap come from?" A gap can grow because women's attainment rises or because men's falls, and the gap alone cannot show which. Switching to female or male attainment shows the reason behind each gap.</p>
+            <p>Tooltips answer "what is the exact value?" Bubble position only shows values approximately, and some values are estimated. The tooltip gives exact numbers and marks interpolated ones, which readers need to judge how much to trust a point.</p>
+            <p>Highlighting answers "what happened to this one country?" With 14 bubbles moving at once, it is hard to follow a single country through the animation. Pinning a country keeps it outlined and labeled in both charts. We label only the pinned or featured countries, because labeling all 14 would cover the bubbles and make the chart harder to read.</p>
+            <p>The region filters answer "how does this region compare on its own?" The large European bubbles overlap each other, so hiding the other regions lets readers separate them and compare countries within one region. The legend shows how many countries each region has, so readers can tell when some are missing from a year because of gaps in the data.</p>
+            <p>The two charts are linked because each shows something the other cannot. The bubble chart shows spending and GDP for one year, and the line chart shows the full trend. Clicking the line chart at any year jumps the bubble chart to that year, so a reader who spots a change in the trend can immediately see that year's spending and GDP context. Highlights and region filters apply to both charts so the two views always show the same countries.</p>
+
+            <h3>Key Findings</h3>
+            <p>Between each country's first and last available year, the gender gap moved toward women in 10 of the 14 countries. Germany had the largest shift: men's lead fell from 14.9 points in 2004 to 6.8 in 2018. Sweden is the only country that moved clearly toward men.</p>
+            <p>The regions also differ sharply. In 2014, men led in all 7 European countries, while women led in 4 of the 6 Latin American countries. Spending does not explain this difference. In 2016, Uruguay and Romania spent almost the same per secondary student (15.9% and 15.2% of GDP per capita), yet women led by 7.1 points in Uruguay while men led by 10.7 points in Romania.</p>
+
+            <h3>Alternatives Considered</h3>
+            <p>We first planned to use Bachelor's degree attainment, but the data was too sparse, so we switched to upper-secondary attainment. Our scope also grew over time, from 4 countries to 7, and then to 14 to include Europe. We compared countries by income group and then by GDP per capita before choosing spending per secondary student as the x-axis, keeping GDP as bubble size.</p>
+            <p>Our exploratory graphs were static Tableau charts. For the final version, we chose a bubble chart inspired by Mike Bostock's <em>The Wealth &amp; Health of Nations</em> because it shows spending, attainment, GDP, region, and time together in one view. Our first interactive version showed one year at a time and felt repetitive, with no clear takeaway, so we added the key findings and the linked line chart to make the patterns visible.</p>
+            <!-- FILL IN: edit the last sentence below to match your team's reason. -->
+            <p>We also considered switching to secondary enrollment data, which reflects current students instead of all adults 25 and older. We kept attainment because it matched the rest of our merged data.</p>
+
+            <h3>Development Process</h3>
+            <p>Safia handled data preparation, merging, interpolation, and the static bubble chart (Steps 0 to 2). Jade built the year animation and the measure selector (Steps 3 and 4). Heta added the tooltips, highlighting, region filters, key findings, and linked line chart, and handled the write-up and deployment (Steps 5 and 6).</p>
+            <!-- FILL IN: replace [X] and the bracketed text below. -->
+            <p>We spent [X] people-hours in total. The most time went to [FILL IN].</p>
+        </section>
+
         <script type="module" src="main.js"></script>
         <noscript><p>Enable JavaScript to use the chart and year controls.</p></noscript>
     </body>
     </html>
-
-
