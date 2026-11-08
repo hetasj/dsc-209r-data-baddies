@@ -469,6 +469,30 @@ input:focus-visible,
     pointer-events: none;
 }
 
+/* Write-up */
+#writeup {
+    max-width: 760px;
+    margin: 72px auto 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgb(235, 215, 230);
+}
+
+#writeup h2 {
+    text-align: center;
+    color: rgb(180, 70, 156);
+}
+
+#writeup h3 {
+    margin: 32px 0 8px;
+    color: rgb(110, 89, 106);
+    font-size: 20px;
+}
+
+#writeup p {
+    font-size: 17px;
+    line-height: 1.6;
+}
+
 @media (max-width: 600px) {
     body { margin: 20px 16px; }
     .year-controls { flex-wrap: wrap; gap: 8px; }
