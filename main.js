@@ -951,7 +951,7 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
     const stories = [
         {
             label: "Gaps moved toward women",
-            year: 2018, measure: "genderGap", countries: [],
+            year: 2016, measure: "genderGap", countries: [],
             text: "Between each country's first and last available year, the gender gap moved toward women in 10 of the 14 countries. The United States, Ecuador and the Dominican Republic stayed within half a point, and Sweden moved toward men. In the line chart below, most lines slope upward."
         },
         {
@@ -966,18 +966,18 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         },
         {
             label: "Germany's big shift",
-            year: 2018, measure: "genderGap", countries: ["Germany"],
-            text: "Men in Germany led by 14.9 percentage points in 2004. By 2018, the lead had shrunk to 6.8 points, the largest change of any country in our data."
+            year: 2006, measure: "genderGap", countries: ["Germany"],
+            text: "Men in Germany led by 14.9 percentage points in 2004. By 2018, the lead had shrunk to 6.8 points, the largest change of any country in our data. Press Play to watch Germany move up, or follow its line in the chart below."
         },
         {
             label: "Sweden, the exception",
-            year: 2017, measure: "genderGap", countries: ["Sweden"],
-            text: "Sweden is the only country that moved clearly toward men: from women ahead by 3.2 points in 2004 to men ahead by 0.7 points in 2017."
+            year: 2004, measure: "genderGap", countries: ["Sweden"],
+            text: "Sweden is the only country that moved clearly toward men: from women ahead by 3.2 points in 2004 to men ahead by 0.7 points in 2017. Press Play to watch it move down, or follow its line in the chart below."
         },
         {
-            label: "A data warning",
+            label: "Dominican Republic's rise",
             year: 2016, measure: "female", countries: ["Dominican Republic"],
-            text: "In the Dominican Republic, female attainment jumps from 38.2% in 2015 to 50.9% in 2016, and male attainment from 31.3% to 46.1%. A jump this large in one year most likely reflects a change in how the data was collected, so we treat 2016 with caution."
+            text: "In the Dominican Republic, spending per secondary student rose from 7.9% of GDP per capita in 2012 to 14.9% in 2016. Over the same period, female attainment rose from 35.8% to 50.9% and male attainment from 29.2% to 46.1%, with the largest increase between 2015 and 2016."
         }
     ];
     const defaultCaption = d3.select("#story-caption").text();
