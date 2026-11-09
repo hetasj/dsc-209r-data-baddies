@@ -75,7 +75,7 @@ The supplied data preparation is retained: only missing gaps of at most two year
   3. Uruguay and Romania spent almost the same in 2016 but had opposite gaps.
   4. Germany's male lead shrank from 14.9 to 6.8 points, the largest change.
   5. Sweden is the only country that moved clearly toward men.
-  6. A data warning: the Dominican Republic jumps 12 to 15 points in one year (2015 to 2016), most likely a data collection change.
+  6. Dominican Republic's rise: spending per secondary student rose from 7.9% to 14.9% between 2012 and 2016, while attainment rose, with the largest increase between 2015 and 2016.
 - **Linked line chart:** shows every country's selected measure from 2004 to 2018, with a marker for the current year. Hovering a line shows the tooltip, clicking a line highlights that country in both charts, and clicking elsewhere jumps to that year. It follows the measure selector, region filters and highlight.
 - The browser check now also covers the line chart and key findings.
 
