@@ -98,6 +98,14 @@ p {
     border-radius: 50%;
 }
 
+/* Large year displayed in the background */
+.background-year {
+  font-size: 150px;
+  font-weight: bold;
+  fill: rgb(180, 70, 156);
+  opacity: 0.35;
+  pointer-events: none;
+}
 /********** Step 3: year animation controls ***********/
 .year-controls,
 .measure-controls {

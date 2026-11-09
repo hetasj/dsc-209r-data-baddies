@@ -10,13 +10,13 @@
         <h1>Exploring Gender Gaps in Upper-Secondary Educational Attainment</h1>
         <h3> By: Jade, Heta and Safia</h3>
 
-        <h2> Research Question: How is government expenditure 
+        <h2> Research Question: How is government expenditure on education 
             per secondary student related to gender gaps 
             in upper-secondary educational attainment 
             across the United States, Europe, and Latin America 
             between 2004 and 2018?</h2>
 
-        <p>Project Description: In this project, we explore gender gaps 
+        <p> Description: In this project, we explore gender gaps 
             in upper-secondary educational attainment across 14 
             countries: the United States, seven European countries, 
             and six Latin American countries. Using data from the 
@@ -27,7 +27,7 @@
             interactive bubble chart, we will create a visualization that 
             allows users to explore changes over time, from 2004 to 2018.
             Each circle represents a country, with its size representing
-             GDP per capita. The x-axis shows government expenditure 
+             GDP per capita. The x-axis shows government expenditure on education
              per secondary student as a percentage of GDP per capita, 
              while the y-axis shows the selected measure: the gender gap,
              female attainment, male attainment or total upper-secondary
@@ -44,6 +44,7 @@
             </section>
             <!-- Current year displayed above the chart -->
             <output id="year-display" for="year-slider">2004</output>
+
             <!-- Step 3: move through the years manually or play the animation. -->
             <div class="year-controls" role="group" aria-label="Year animation">
                 <button id="play-pause" type="button" aria-pressed="false" disabled>Play</button>
@@ -102,7 +103,7 @@
             <p>A country appears in a given year only when spending, GDP, and the selected measure are all available, so some years show fewer countries. The status line under the chart reports how many countries are shown. We also noticed that the Dominican Republic's attainment rates jump 12 to 15 points between 2015 and 2016. This most likely reflects a change in data collection, so we flag it in our key findings instead of presenting it as real progress.</p>
 
             <h3>Visual Encodings</h3>
-            <p>The main view is a bubble chart. The x-axis shows government spending per secondary student as a percentage of GDP per capita, which we chose because it is specific to the education level we study. The y-axis shows the selected measure. For the gender gap, the axis is symmetric around zero, with a dashed line marking parity, and the attainment views use a 0 to 100% axis.</p>
+            <p>The main view is a bubble chart. The x-axis shows government spending on education per secondary student as a percentage of GDP per capita, which we chose because it is specific to the education level we study. The y-axis shows the selected measure. For the gender gap, the axis is symmetric around zero, with a dashed line marking parity, and the attainment views use a 0 to 100% axis.</p>
             <p>Bubble area represents GDP per capita, using a square-root scale so that area, not radius, is proportional to GDP. Color represents the region, with three distinct hues for Europe, Latin America, and the United States. The axes and bubble sizes stay the same across all years, so any movement reflects an actual change rather than a change in scale.</p>
             <p>Below the bubble chart, a line chart shows each country's selected measure from 2004 to 2018 in the same region colors, with a vertical marker for the current year. This shows the full trend for every country at once, which the animation alone cannot. The visualization is built entirely with D3.js.</p>
 
@@ -125,7 +126,7 @@
             <p>Our exploratory graphs were static Tableau charts. For the final version, we chose a bubble chart inspired by Mike Bostock's <em>The Wealth &amp; Health of Nations</em> because it shows spending, attainment, GDP, region, and time together in one view. Our first interactive version showed one year at a time and felt repetitive, with no clear takeaway, so we added the key findings and the linked line chart to make the patterns visible.</p>
             <p>We also considered switching to secondary enrollment data, which reflects current students instead of all adults 25 and older. We kept attainment because it matched the rest of our merged data.</p>
 
-            <p>Safia handled data preparation, merging, interpolation, and the static bubble chart (Steps 0 to 2). Jade merged our first combined dataset, built the year animation and measure selector, and wrote an automated browser test for each year and measure (Steps 3 and 4). Heta added the tooltips, highlighting, region filters, key findings, and linked line chart, and handled deployment (Steps 5 and 6).</p>
+            <p>We collaboratively discussed and decided on the overall project direction, visualization approach, and key design choices. Safia conducted data exploration, created initial static graphs to examine patterns and identify relevant variables, and handled data preparation, merging, interpolation before developing the static bubble chart (Steps 0 to 2). Jade merged our first combined dataset, built the year animation and measure selector, and wrote an automated browser test for each year and measure (Steps 3 and 4). Heta added the tooltips, highlighting, region filters, key findings, and linked line chart, and handled deployment (Steps 5 and 6).</p>
             <p>We spent [X] people-hours in total. The most time went to [FILL IN].</p>
         </section>
 

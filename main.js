@@ -365,6 +365,14 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
             "transform",
             `translate(${margin.left},${margin.top})`
         );
+    // Large year displayed in the background
+    const backgroundYear = plot.append("text")
+    .attr("class", "background-year")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight / 2)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .text(currentYear);
 
     // CREATE THE GRIDLINES
     // Vertical gridlines follow the X-axis ticks.
@@ -415,7 +423,7 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         .attr("x", innerWidth / 2)
         .attr("y", innerHeight + 60)
         .attr("text-anchor", "middle")
-        .text("Government expenditure per secondary student (% of GDP per capita)");
+        .text("Government expenditure on education per secondary student (% of GDP per capita)");
 
     // ADD THE Y-AXIS LABEL
     const yAxisLabel = plot.append("text")
@@ -825,6 +833,7 @@ d3.csv("combined-fourteen-countries.csv").then(rawData => {
         }
 
         d3.select("#year-display").text(currentYear);
+        backgroundYear.text(currentYear);
         yearSlider.property("value", currentYear).attr("aria-valuetext", String(currentYear));
         d3.select("#measure-description").text(measure.description);
         svg.attr("aria-label", measure.label + " by government expenditure in " + currentYear);
